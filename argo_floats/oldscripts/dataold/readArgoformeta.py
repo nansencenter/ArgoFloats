@@ -6,6 +6,7 @@ import datetime
 #url = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/aoml/7900685/profiles/R7900685_002.nc'
 #url = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/csiro/7900629/profiles/R7900629_003.nc'
 url = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/nmdis/2901633/profiles/R2901633_071.nc'
+#nc = netCDF4.Dataset('R2901633_071.nc')
 nc = netCDF4.Dataset(url)
 print nc.variables
 print nc.variables.keys()

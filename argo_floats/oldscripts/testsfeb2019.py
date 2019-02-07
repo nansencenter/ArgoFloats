@@ -14,112 +14,49 @@ url = 'http://tds0.ifremer.fr/thredds/catalog/CORIOLIS-ARGO-GDAC-OBS/kordi/catal
 
 class TestDataset(TestCase):
     fixtures = ['vocabularies', 'catalog']
-
-    def test_getorcreate_opendap_uri(self):
-        added = crawl(url)
-        self.stdout.write(
-        'Successfully added metadata of %s Argo float profiles' %added)
-        
-    def test_failing_ds(self):
-        fn = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_005.nc'
-        ds, cr = ArgoFloats.objects.get_or_create(fn)
-    
-
-
-
-
-#...............................old................
-
-        # weburi now has links to all the Argo float profiles listed in this server
-        # Note that for the time being, only profiles from the first 5 Argo floats are included for computation easiness ...
-        # Edit crawl in argo_floats.utils to change the number of Argo floats read  
-
-#        jr=0
-#        for rr in weburi:
-#            urinew = (''.join(weburi[jr]))
-#            print (urinew)
- 
-#            ds0, cr0 = ArgoFloats.objects.get_or_create(urinew)
-#            ds1, cr1 = ArgoFloats.objects.get_or_create(urinew)
- 
-#            self.assertTrue(cr0)
-#            self.assertFalse(cr1)
- 
-#            jr += 1
-
-#    def test_failing_ds(self):
-#        fn = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_005.nc'
-#        ds, cr = ArgoFloats.objects.get_or_create(fn)
-
-
-
-
-#    def test_crawl(self):
-#        print ('url is', url)
-#        weburi = crawl(url) 
-        
+    def test_crawl(self):
+        print ('url is', url)
+        weburi = crawl(url) 
         # weburi now has links to all the Argo float profiles listed in this server
         # Note that for the time only profiles from the first 5 Argo floats are included for computation easiness ...
 	# Edit crawl in argo_floats.utils to change the number of Argo floats read  
         	
-#        import ipdb
-#        ipdb.set_trace()	
+        import ipdb
+        ipdb.set_trace()	
 
-#    def test_getorcreate_opendap_uri(self):
-#        weburi = crawl(url)
-#        jr=0
-#        for rr in weburi:
-#            urinew = (''.join(weburi[jr]))	    
-#            print (urinew)
-#            ds0, cr0 = ArgoFloats.objects.get_or_create(urinew)
-#            ds1, cr1 = ArgoFloats.objects.get_or_create(urinew)
+
+
+        jr=0
+        for rr in weburi:
+            nc = netCDF4.Dataset(''.join(weburi[jr]))
+#            time    = nc.variables['JULD']
+#            print('time data',time[0])
+#ro            import ipdb
+#ro            ipdb.set_trace()
+#            NewDate = datetime.datetime(1950, 1, 1, 0, 0) + datetime.timedelta(float(time[0].data))
+#            print ('The date is: ', NewDate)
+	    
+            urinew = (''.join(weburi[jr]))	    
+            print (urinew)
+
+#	    ds0, cr0 = ArgoFloats.objects.get_or_create(urinew)
+#	    ds1, cr1 = ArgoFloats.objects.get_or_create(urinew)
+            
 #            self.assertTrue(cr0)
 #            self.assertFalse(cr1)
-#            jr += 1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ 	    
+            jr += 1
 	    
-#    def test_getorcreate_opendap_uri(self):
+    def test_getorcreate_opendap_uri(self):
 
-#        import ipdb
-#        ipdb.set_trace()
+        import ipdb
+        ipdb.set_trace()
 
-#        ds0, cr0 = ArgoFloats.objects.get_or_create(uri)
-#        ds1, cr1 = ArgoFloats.objects.get_or_create(uri)
+        ds0, cr0 = ArgoFloats.objects.get_or_create(uri)
+        ds1, cr1 = ArgoFloats.objects.get_or_create(uri)
 
-#        self.assertTrue(cr0)
-#        self.assertFalse(cr1)
+        self.assertTrue(cr0)
+        self.assertFalse(cr1)
 
 
 #       .......Netcdf files from nmdis servere has a problem

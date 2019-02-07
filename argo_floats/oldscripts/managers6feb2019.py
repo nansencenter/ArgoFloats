@@ -4,7 +4,6 @@ import datetime
 import os
 import pythesint as pti
 import netCDF4
-import sys
 from django.db import models
 from django.conf import settings
 from django.contrib.gis.geos import LineString
@@ -36,21 +35,19 @@ class ArgoFloatsManager(models.Manager):
         uris = DatasetURI.objects.filter(uri=uri)
         if len(uris) > 0:
             return uris[0].dataset, False
-        
-        print(uri)        
-        nc = netCDF4.Dataset(uri)
-	# set source	
+
+	 # set source	
         pp = Platform.objects.get(short_name='BUOYS')
         ii = Instrument.objects.get(short_name='DRIFTING BUOYS')
         source = Source.objects.get_or_create(platform=pp, instrument=ii)[0]
          # Note that datacenter is defined inside the loop (see the code below)
         iso_category = ISOTopicCategory.objects.get(name='Oceans')
 	 # reading the data
-#        nc = netCDF4.Dataset(uri)
+        nc = netCDF4.Dataset(uri)
 	 # Time variable read
         time    = nc.variables['JULD']
-#        import ipdb
-#        ipdb.set_trace()
+        import ipdb
+        ipdb.set_trace()
         #Reading depth variable
         depth = nc.variables['PRES']
         #print ('checking data', depth[0])
@@ -110,11 +107,12 @@ class ArgoFloatsManager(models.Manager):
 
 	 # Reading Platform number
         platnum = nc.variables['PLATFORM_NUMBER'][dd]
+#        import ipdb
+#        ipdb.set_trace()
         ptstr2= ''.join(map(str, platnum))
         platnum1 = ptstr2.replace("b", "")
         platnum2 = platnum1.replace("'", "")
-        platnumstr = platnum2.replace("--", "")
-        platnumnew =int(platnumstr)
+        platnumnew = platnum2.replace("--", "")
         print ('platform number', platnumnew)
 #        import ipdb
 #        ipdb.set_trace()
@@ -125,28 +123,25 @@ class ArgoFloatsManager(models.Manager):
         yearargo = newdate.strftime('%Y')
         monargo = newdate.strftime('%m')
         dayargo = newdate.strftime('%d')
-        
+	 
+	 # Reading Lat Lon Variables
         latitude = nc.variables['LATITUDE'][dd]
-        longitude = nc.variables['LONGITUDE'][dd]
-        
-        lonm=nc.variables['LONGITUDE'][dd].mask
-        latm=nc.variables['LATITUDE'][dd].mask
-        timm=nc.variables['JULD'][dd].mask
-         
-        if (lonm == True or latm == True):
-            longitude=-999.9
-            latitude=-999.9
-
-        print ('newdate',newdate)
         print ('latitude',latitude)
+        longitude = nc.variables['LONGITUDE'][dd]
         print ('longitude',longitude)
-       
         location = GEOSGeometry('POINT(%s %s)' % (longitude, latitude))
+        print ('location',location)
         geolocation = GeographicLocation.objects.get_or_create(geometry=location)[0]
+
+#        import ipdb
+#        ipdb.set_trace()
+		
+        print ('geolocation', geolocation)
+        print ('datacenter',dc)
+        print ('source',source)
+
         ds, created = Dataset.objects.get_or_create(
             #entry_id = platnumnew,
-            entry_title = '%s platform number. %d' % (
-                           pp,platnumnew),
             ISO_topic_category = iso_category,
             source = source,
             data_center = dc,
@@ -158,6 +153,3 @@ class ArgoFloatsManager(models.Manager):
 
         ds_uri, ds_uri_created = DatasetURI.objects.get_or_create(uri=uri, dataset=ds)
         return ds, created
-
-
-
