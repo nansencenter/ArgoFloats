@@ -23,10 +23,10 @@ url = 'http://tds0.ifremer.fr/thredds/catalog/CORIOLIS-ARGO-GDAC-OBS/kordi/catal
 class TestDataset(TestCase):
     fixtures = ['vocabularies', 'catalog']
 
-    def test_getorcreate_opendap_uri(self):
-        added = crawl(url)
-        self.stdout.write(
-        'Successfully added metadata of %s Argo float profiles' %added)
+#    def test_getorcreate_opendap_uri(self):
+#        added = crawl(url)
+#        self.stdout.write(
+#        'Successfully added metadata of %s Argo float profiles' %added)
         
     def test_wronglongitude(self):
         fn = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_005.nc'
