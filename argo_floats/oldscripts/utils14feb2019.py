@@ -83,10 +83,30 @@ def get_data(datauri):
     """        
     print(datauri)
     nc = netCDF4.Dataset(datauri)
+    time    = nc.variables['JULD']
+    depth = nc.variables['PRES']
 
-    lonm=nc.variables['LONGITUDE'][0].mask
-    latm=nc.variables['LATITUDE'][0].mask
-    timm=nc.variables['JULD'][0].mask
+    checkdepth = 0
+    findepth = np.zeros(time.shape[0])
+    for i in range (0, depth.shape[0]):
+        maxdepth = np.amax(depth[i])
+        findepth[i] = maxdepth
+        if (maxdepth > checkdepth):
+            dd=i
+            checkdepth = maxdepth
+        maxdepth = findepth[dd]
+    
+    temperature = nc.variables['TEMP'][dd]   
+    tempadj=nc.variables['TEMP_ADJUSTED'][dd]
+    depthnew = nc.variables['PRES'][dd]    
+    depthadj = nc.variables['PRES_ADJUSTED'][dd]    
+
+    latitude = nc.variables['LATITUDE'][dd]
+    longitude = nc.variables['LONGITUDE'][dd]
+
+    lonm=nc.variables['LONGITUDE'][dd].mask
+    latm=nc.variables['LATITUDE'][dd].mask
+    timm=nc.variables['JULD'][dd].mask
 
     if (lonm == True or latm == True):
         longitude=-999.9
@@ -94,14 +114,14 @@ def get_data(datauri):
 
 
     out = {}
-    out['latitude'] = nc.variables.pop('LATITUDE')[0]
-    out['longitude'] = nc.variables.pop('LONGITUDE')[0]
-    out['temperature'] = nc.variables.pop('TEMP')[0]
-    out['temperatureadj'] = nc.variables.pop('TEMP_ADJUSTED')[0]
-    out['salinity'] = nc.variables.pop('PSAL')[0]
-    out['salinityadj'] = nc.variables.pop('PSAL_ADJUSTED')[0]
-    out['depth'] = nc.variables.pop('PRES')[0]
-    out['depthadj'] = nc.variables.pop('PRES_ADJUSTED')[0]
+    out['latitude'] = nc.variables.pop('LATITUDE')[dd]
+    out['longitude'] = nc.variables.pop('LONGITUDE')[dd]
+    out['temperature'] = nc.variables.pop('TEMP')[dd]
+    out['temperatureadj'] = nc.variables.pop('TEMP_ADJUSTED')[dd]
+    out['salinity'] = nc.variables.pop('PSAL')[dd]
+    out['salinityadj'] = nc.variables.pop('PSAL_ADJUSTED')[dd]
+    out['depth'] = nc.variables.pop('PRES')[dd]
+    out['depthadj'] = nc.variables.pop('PRES_ADJUSTED')[dd]
     
     return out
 

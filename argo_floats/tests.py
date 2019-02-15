@@ -1,13 +1,21 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+from mock import patch
+
 import netCDF4
 import datetime
 from django.test import TestCase
 from django.utils.six import StringIO
 from django.core.management import call_command
-from  argo_floats.models import ArgoFloats
+
+from geospaas.catalog.models import  Dataset
+from argo_floats.models import ArgoFloats
 from argo_floats.utils import crawl
+from argo_floats.utils import try_add_argo_float
+from argo_floats.utils import get_data
+from argo_floats.utils import datafilter
+
 #from thredds_crawler.crawl import Crawl
 
 url = 'http://tds0.ifremer.fr/thredds/catalog/CORIOLIS-ARGO-GDAC-OBS/kordi/catalog.html'
@@ -20,12 +28,50 @@ class TestDataset(TestCase):
         self.stdout.write(
         'Successfully added metadata of %s Argo float profiles' %added)
         
-    def test_failing_ds(self):
+    def test_wronglongitude(self):
         fn = 'http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_005.nc'
         ds, cr = ArgoFloats.objects.get_or_create(fn)
-    
+   
+    @patch('argo_floats.utils.ArgoFloats')    
+    def test_failing_ds(self, mockaf):
+        mockaf.objects.get_or_create.side_effect = OSError
+        fn='http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900121/profiles/R7900121_148.nc'
+        ds0, cr0 = try_add_argo_float(fn)
+        self.assertIsNone(ds0)
+        self.assertFalse(cr0)
+
+    @patch('argo_floats.utils.ArgoFloats')    
+    def test_workingfunction(self, mockaf):
+        mockaf.objects.get_or_create.return_value = (Dataset(), True)
+        fn='http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_006.nc'
+        ds, cr = try_add_argo_float(fn)
+        self.assertIsInstance(ds, Dataset)
+        self.assertTrue(cr)
 
 
+    def test_read(self):
+        f2='http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_006.nc'
+        readdata = get_data(f2)
+        print('Successfully read data',readdata)
+     
+    def test_datafilter(self):
+        idargo='7900179'
+        year='2008'
+        timefilt='2008-06-15 16:23:32.000012'
+
+        fn=["http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_006.nc","http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_007.nc","http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_008.nc","http://tds0.ifremer.fr/thredds/dodsC/CORIOLIS-ARGO-GDAC-OBS/kordi/7900179/profiles/R7900179_009.nc"]
+ 
+        ds=[]
+        for ii in range(len(fn)):
+            fn[ii]
+            ds0, cr0 = try_add_argo_float(fn[ii])
+            ds.append(ds0)    
+
+        extractwebid = datafilter(timefilt,idargo,year)
+
+        print(extractwebid)
+       
+#        print(extdata)
 
 
 #...............................old................

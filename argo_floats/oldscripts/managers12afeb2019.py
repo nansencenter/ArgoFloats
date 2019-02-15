@@ -39,24 +39,45 @@ class ArgoFloatsManager(models.Manager):
         
         print(uri)        
         nc = netCDF4.Dataset(uri)
-        if nc.dimensions['N_HISTORY'].size == 0:
-            raise ValueError('Wrong N_HISTORY in ', uri)
 	# set source	
         pp = Platform.objects.get(short_name='BUOYS')
         ii = Instrument.objects.get(short_name='DRIFTING BUOYS')
         source = Source.objects.get_or_create(platform=pp, instrument=ii)[0]
-        iso_category = ISOTopicCategory.objects.get(name='Oceans')
          # Note that datacenter is defined inside the loop (see the code below)
+        iso_category = ISOTopicCategory.objects.get(name='Oceans')
+	 # reading the data
+#        nc = netCDF4.Dataset(uri)
+	 # Time variable read
         time    = nc.variables['JULD']
-        depth = nc.variables['PRES']
 #        import ipdb
 #        ipdb.set_trace()
         #Reading depth variable
+        depth = nc.variables['PRES']
+        #print ('checking data', depth[0])
+	
+
+	 # checking whether there is more than one profile data on the same day, Found that data from AOML has this problem 
+	 # if there is, then delete the wrong data, In here the shallowest profile is removed
+	 # if we check manually we can see that the wrong profile doesnot go beyond 500 meter.
+
+        checkdepth = 0
+        findepth = np.zeros(time.shape[0])
+
+        for i in range (0, depth.shape[0]):
+            maxdepth = np.amax(depth[i])
+            findepth[i] = maxdepth
+            if (maxdepth > checkdepth):
+                dd=i
+                checkdepth = maxdepth
+        maxdepth = findepth[dd]	
+
 	# Reading info about the data center
-        dca = nc.variables['DATA_CENTRE'][0]
+        dca = nc.variables['DATA_CENTRE'][dd]
         dcstr2= ''.join(map(str, dca))
         datacenter1 = dcstr2.replace("b", "")
         datacenter = datacenter1.replace("'", "")
+        #print (dca)
+        print ('datacenter',datacenter)
 
         #import ipdb
         #ipdb.set_trace()
@@ -73,40 +94,75 @@ class ArgoFloatsManager(models.Manager):
             'KM': '',
             'IN': '',
             'HZ': '',}
+#        bucket_levels = {...}
         short_name = datacenters[datacenter]
         
         if (datacenter == 'NM' or 'ME' or 'KO' or 'KM' or 'IN' or 'HZ'):
             dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')
         else:
+#        bucket_level0 = bucket_levels[datacenter]
             dc = DataCenter.objects.get(short_name=short_name)
 
+#        import ipdb
+#        ipdb.set_trace()
+#        dc = DataCenter.objects.get(short_name=short_name, bucket_level0=bucket_level0)
+#        if (datacenter == 'AO'):
+#            dc = DataCenter.objects.get(short_name='DOC/NOAA/OAR/AOML')		
+#        if (datacenter == 'JA'):
+#            dc = DataCenter.objects.get(short_name='JP/JMA/MRI')
+#        if (datacenter == 'CS'):
+#            dc = DataCenter.objects.get(short_name='AU/CSIRO/CLW')
+#        if (datacenter == 'IF'):
+#            dc = DataCenter.objects.get(short_name='FR/IFREMER/CORIOLIS')
+#        if (datacenter == 'BO'):
+#            dc = DataCenter.objects.get(short_name='UK/NERC/BODC')
+#        if (datacenter == 'NM'):
+#            dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')
+#        if (datacenter == 'ME'):
+#            dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')
+#        if (datacenter == 'KO'):
+#            dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')
+#        if (datacenter == 'KM'):
+#            dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')	 
+#        if (datacenter == 'IN'):
+#            dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')
+#        if (datacenter == 'HZ'):
+#            dc = DataCenter.objects.get(bucket_level0=r'ACADEMIC', short_name='', data_center_url='', bucket_level1='')
+
+        #print (dc)
+
 	 # Reading Platform number
-        platnum = nc.variables['PLATFORM_NUMBER'][0]
+        platnum = nc.variables['PLATFORM_NUMBER'][dd]
         ptstr2= ''.join(map(str, platnum))
         platnum1 = ptstr2.replace("b", "")
         platnum2 = platnum1.replace("'", "")
         platnumstr = platnum2.replace("--", "")
         platnumnew =int(platnumstr)
+        print ('platform number', platnumnew)
 #        import ipdb
 #        ipdb.set_trace()
 		 
+	# final Date 
         newdate = datetime.datetime(1950, 1, 1, 0, 0) + datetime.timedelta(float(time[0].data))
         #newdate = datetime.datetime(1950, 1, 1, 0, 0) + datetime.timedelta(int(time[0].data))
         yearargo = newdate.strftime('%Y')
         monargo = newdate.strftime('%m')
         dayargo = newdate.strftime('%d')
         
-        latitude = nc.variables['LATITUDE'][0]
-        longitude = nc.variables['LONGITUDE'][0]
+        latitude = nc.variables['LATITUDE'][dd]
+        longitude = nc.variables['LONGITUDE'][dd]
         
-        lonm=nc.variables['LONGITUDE'][0].mask
-        latm=nc.variables['LATITUDE'][0].mask
-        timm=nc.variables['JULD'][0].mask
+        lonm=nc.variables['LONGITUDE'][dd].mask
+        latm=nc.variables['LATITUDE'][dd].mask
+        timm=nc.variables['JULD'][dd].mask
          
         if (lonm == True or latm == True):
             longitude=-999.9
             latitude=-999.9
 
+        print ('newdate',newdate)
+        print ('latitude',latitude)
+        print ('longitude',longitude)
        
         location = GEOSGeometry('POINT(%s %s)' % (longitude, latitude))
         geolocation = GeographicLocation.objects.get_or_create(geometry=location)[0]
@@ -114,15 +170,15 @@ class ArgoFloatsManager(models.Manager):
             entry_id = uri,
             entry_title = '%s platform number. %d' % (
                            pp,platnumnew),
-#            entry_title = 'platform number. %d' % (platnumnew),
-#            entry_title =platnumnew,
             ISO_topic_category = iso_category,
             source = source,
             data_center = dc,
             geographic_location = geolocation,
             time_coverage_start = newdate
             )
-         
+
+        # Also add DatasetParameter (see new code from Jeong-Won)
+
         ds_uri, ds_uri_created = DatasetURI.objects.get_or_create(uri=uri, dataset=ds)
         return ds, created
 
