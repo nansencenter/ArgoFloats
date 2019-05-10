@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.gis.geos import LineString
 
 from django.contrib.gis.geos import GEOSGeometry
-from geospaas.utils import validate_uri, nansat_filename
+from geospaas.utils.utils import validate_uri, nansat_filename
 
 
 from geospaas.vocabularies.models import Platform, Instrument, Location
@@ -37,7 +37,6 @@ class ArgoFloatsManager(models.Manager):
         if len(uris) > 0:
             return uris[0].dataset, False
         
-        print(uri)        
         nc = netCDF4.Dataset(uri)
         if nc.dimensions['N_HISTORY'].size == 0:
             raise ValueError('Wrong N_HISTORY in ', uri)
@@ -49,17 +48,12 @@ class ArgoFloatsManager(models.Manager):
          # Note that datacenter is defined inside the loop (see the code below)
         time    = nc.variables['JULD']
         depth = nc.variables['PRES']
-#        import ipdb
-#        ipdb.set_trace()
         #Reading depth variable
 	# Reading info about the data center
         dca = nc.variables['DATA_CENTRE'][0]
         dcstr2= ''.join(map(str, dca))
         datacenter1 = dcstr2.replace("b", "")
         datacenter = datacenter1.replace("'", "")
-
-        #import ipdb
-        #ipdb.set_trace()
 
         datacenters = {
             'AO': 'DOC/NOAA/OAR/AOML', 
@@ -87,9 +81,7 @@ class ArgoFloatsManager(models.Manager):
         platnum2 = platnum1.replace("'", "")
         platnumstr = platnum2.replace("--", "")
         platnumnew =int(platnumstr)
-#        import ipdb
-#        ipdb.set_trace()
-		 
+
         newdate = datetime.datetime(1950, 1, 1, 0, 0) + datetime.timedelta(float(time[0].data))
         #newdate = datetime.datetime(1950, 1, 1, 0, 0) + datetime.timedelta(int(time[0].data))
         yearargo = newdate.strftime('%Y')
@@ -125,6 +117,3 @@ class ArgoFloatsManager(models.Manager):
          
         ds_uri, ds_uri_created = DatasetURI.objects.get_or_create(uri=uri, dataset=ds)
         return ds, created
-
-
-
