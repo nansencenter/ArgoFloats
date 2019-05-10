@@ -7,7 +7,7 @@ from thredds_crawler.crawl import Crawl
 
 from django.contrib.gis.geos import GEOSGeometry
 
-from geospaas.utils import validate_uri
+from geospaas.utils.utils import validate_uri
 
 from argo_floats.models import ArgoFloats
 from geospaas.vocabularies.models import Platform, Instrument, Location
@@ -73,16 +73,15 @@ def crawl(url):
 #    return sitenamerd	
     return added
 
-def get_data(datauri):
+def get_data(dataset):
     """ Return data stored in a remote netCDF dataset available via OpenDAP
     Parameters
     ----------
-    uri : string
-    The full uri of the dataset        
+    dataset : geospaas.models.Dataset
+    The dataset to retrieve
 
     """        
-    print(datauri)
-    nc = netCDF4.Dataset(datauri)
+    nc = netCDF4.Dataset(dataset.dataseturi_set.all()[0].uri)
 
     lonm=nc.variables['LONGITUDE'][0].mask
     latm=nc.variables['LATITUDE'][0].mask
