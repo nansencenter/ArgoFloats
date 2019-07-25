@@ -1,0 +1,23 @@
+---
+channels:
+  - conda-forge
+dependencies:
+  - python=3.6
+  - scipy
+  - django
+  - binutils
+  - pyproj
+  - gdal
+  - libspatialite
+  - pythesint
+  - nansat
+  - nose
+  - coveralls
+  - mock
+  - ipython
+  - ipdb
+  - thredds_crawler
+  - cartopy
+  - basemap-data-hires
+  - folium
+  - jupyter

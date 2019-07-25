@@ -1,0 +1,79 @@
+# Adding the shared folder to the pythonpath allows development work for the current repository
+# given that the actual python app is located on the root, e.g., argo/argo
+#- name: argo | Add PYTHONPATH to bashrc
+#  lineinfile: dest="/home/vagrant/.bashrc" line="export PYTHONPATH=/vagrant"
+
+  - name: argo | Change owner of anaconda directory (otherwise later provisioning will fail)
+    shell: "sudo chown -R vagrant {{ conda_dir }}/"
+
+  - name: argo | create file activate.d/env_vars.sh in conda env
+    file:
+      path: "{{ conda_dir }}/envs/{{ env_name }}/etc/conda/activate.d/env_vars.sh"
+      state: touch
+      mode: u=rw,g=r,o=r
+  
+  - name: argo | Set comment in environment variable file
+    lineinfile:
+        path: "{{ conda_dir }}/envs/{{ env_name }}/etc/conda/activate.d/env_vars.sh"
+        insertbefore: BOF
+        line: "#!/bin/bash"
+  
+  - name: argo | Set PYTHONPATH environment variable required by Nansat for use in Jupyter
+    lineinfile:
+        path: "{{ conda_dir }}/envs/{{ env_name }}/etc/conda/activate.d/env_vars.sh"
+        line: "export PYTHONPATH=/vagrant:{{ project_home }}:{{ project_home }}/{{ project_name }}"
+  
+  - name: argo | Set PROJ_LIB environment variable required by Nansat for use in Jupyter
+    lineinfile:
+        path: "{{ conda_dir }}/envs/{{ env_name }}/etc/conda/activate.d/env_vars.sh"
+        line: "export PROJ_LIB={{ conda_dir }}/envs/{{ env_name }}/share/proj"
+  
+  - name: argo | create shell script to run jupyter notebook
+    file:
+      path: /home/vagrant/run_jupyter.sh
+      state: touch
+      mode: u=rwx,g=r,o=r
+
+  - name: argo | Set header in run_jupyter.sh script
+    lineinfile:
+        path: /home/vagrant/run_jupyter.sh
+        insertbefore: BOF
+        line: "#!/bin/bash"
+
+  - name: argo | Wait a little before activating env and starting jupyter
+    lineinfile:
+        path: /home/vagrant/run_jupyter.sh
+        line: sleep 60
+
+  - name: argo | Line to activate virtual env in shell script
+    lineinfile:
+        path: /home/vagrant/run_jupyter.sh
+        line: "source {{ conda_dir }}/bin/activate {{ env_name }}"
+  
+  - name: argo | Line to start jupyter in shell script
+    lineinfile:
+        path: /home/vagrant/run_jupyter.sh
+        line: "{{ conda_dir }}/envs/{{ env_name }}/bin/jupyter-notebook --ip=0.0.0.0 --no-browser --notebook-dir=/vagrant/notebooks/ --NotebookApp.token=vagrant"
+
+  - name: argo | Set cron shell to bash 
+    cron: 
+        name: SHELL
+        env: yes
+        job: /bin/bash
+  
+  - name: argo | Add Jupyter Notebook to crontab
+    cron: 
+        name: "Jupyter Notebook"
+        special_time: reboot
+        job: "/home/vagrant/run_jupyter.sh"
+  
+  - name: argo | Check if Jupyter is running
+    shell: ps aux | grep jupyter | grep -v grep
+    ignore_errors: yes
+    changed_when: false
+    register: jupyter_status
+  
+  - name: argo | Launch Jupyter Notebook
+    shell: "nohup /home/vagrant/run_jupyter.sh > /dev/null 2>&1 &"
+    when: jupyter_status.rc != 0
+
