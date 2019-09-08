@@ -36,16 +36,19 @@ class ArgoFloatsManager(models.Manager):
         uris = DatasetURI.objects.filter(uri=uri)
         if len(uris) > 0:
             return uris[0].dataset, False
+        skips = ['.*ncml', '.*meta.nc', '.*Rtraj.nc', '.*tech.nc']
+        import ipdb
+        ipdb.set_trace()
         
         nc = netCDF4.Dataset(uri)
-        if nc.dimensions['N_HISTORY'].size == 0:
-            raise ValueError('Wrong N_HISTORY in ', uri)
+        #if nc.dimensions['N_HISTORY'].size == 0:
+        #    raise ValueError('Wrong N_HISTORY in ', uri)
 	# set source	
         pp = Platform.objects.get(short_name='BUOYS')
         ii = Instrument.objects.get(short_name='DRIFTING BUOYS')
         source = Source.objects.get_or_create(platform=pp, instrument=ii)[0]
         iso_category = ISOTopicCategory.objects.get(name='Oceans')
-         # Note that datacenter is defined inside the loop (see the code below)
+        # Note that datacenter is defined inside the loop (see the code below)
         time    = nc.variables['JULD']
         depth = nc.variables['PRES']
         #Reading depth variable

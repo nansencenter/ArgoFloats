@@ -5,6 +5,7 @@ import numpy as np
 import os
 from thredds_crawler.crawl import Crawl
 
+from django.db.utils import IntegrityError
 from django.contrib.gis.geos import GEOSGeometry
 
 from geospaas.utils.utils import validate_uri
@@ -37,41 +38,71 @@ def try_add_argo_float(uricorrect, tries=3):
 
     return ds, cr
 
+def crawl(url, **options):
+    validate_uri(url)
 
-def crawl(url):
-    c = Crawl(url, select=['.*meta.nc'], skip=None, debug=None)
-    locsite = []
-    
-    for jr in c.datasets:
-        locsite.append(str(jr.id))
-    rdro = ['http://tds0.ifremer.fr/thredds/catalog/' + '/'.join(jj.split('/')[:-1]) + '/catalog.html' for jj in locsite]
-#    print (rdro)
-
-    #print ('the new data is',rdro[0:1])
-    gd = 0
-    sitenamerd=[]
-    added=0
-    for kk in rdro:
-    #for kk in rdro[0:4]: 
-        urd = rdro[gd]
-        crr = Crawl(urd, select=None, skip=['.*meta.nc', '.*Rtraj.nc', '.*tech.nc'], debug=None)
-        gd += 1
-
-        for pp in crr.datasets:
-            #print (pp.id)
-            sitenamerd.append(['http://tds0.ifremer.fr/thredds/dodsC/'+ str(pp.id)])
-            uricorrect='http://tds0.ifremer.fr/thredds/dodsC/'+ str(pp.id)
-            ds0, cr0 = try_add_argo_float(uricorrect)
-
-            if cr0:
-                print ('Added %s, no. %d,%d'%(url, added, len(crr.datasets)))
-                added += 1
-                print('Added',added)
-
-#            import ipdb
-#            ipdb.set_trace() 
-#    return sitenamerd	
+    skips = Crawl.SKIPS + ['.*ncml', '.*meta.nc', '.*Rtraj.nc', '.*tech.nc']
+    c = Crawl(url, skip=skips, debug=True)
+    added = 0
+    for ds in c.datasets:
+        url = [s.get('url') for s in ds.services if
+                s.get('service').lower()=='opendap'][0]
+        metno_obs_stat, cr = ArgoFloats.objects.get_or_create(url)
+        if cr:
+            added += 1
+            print('Added %s, no. %d/%d'%(url, added, len(c.datasets)))
+        # Connect all service uris to the dataset
+        for s in ds.services:
+            try:
+                ds_uri, _ = DatasetURI.objects.get_or_create(name=s.get('name'),
+                    service=s.get('service'), uri=s.get('url'), dataset=gds)
+            except IntegrityError:
+                # There is no standard for the name (and possibly the service). This means that the
+                # naming defined by geospaas.catalog.managers.DAP_SERVICE_NAME (and assigned to the
+                # DatasetURI in geospaas.nansat_ingestor.managers.DatasetManager.get_or_create) may
+                # be different from s.get('name').
+                # Solution: ignore the error and continue the loop
+                continue
     return added
+
+#def crawl(url):
+#    c = Crawl(url, select=['.*meta.nc'], skip=None, debug=None)
+#    locsite = []
+#    
+#    for jr in c.datasets:
+#        locsite.append(str(jr.id))
+#
+#    rdro = ['http://tds0.ifremer.fr/thredds/catalog/' + '/'.join(jj.split('/')[:-1]) +
+#            '/catalog.html' for jj in locsite]
+##    print (rdro)
+#    import ipdb
+#    ipdb.set_trace()
+#
+#    #print ('the new data is',rdro[0:1])
+#    gd = 0
+#    sitenamerd=[]
+#    added=0
+#    for kk in rdro:
+#    #for kk in rdro[0:4]: 
+#        urd = rdro[gd]
+#        crr = Crawl(urd, select=None, skip=['.*meta.nc', '.*Rtraj.nc', '.*tech.nc'], debug=None)
+#        gd += 1
+#
+#        for pp in crr.datasets:
+#            #print (pp.id)
+#            sitenamerd.append(['http://tds0.ifremer.fr/thredds/dodsC/'+ str(pp.id)])
+#            uricorrect='http://tds0.ifremer.fr/thredds/dodsC/'+ str(pp.id)
+#            ds0, cr0 = try_add_argo_float(uricorrect)
+#
+#            if cr0:
+#                print ('Added %s, no. %d,%d'%(url, added, len(crr.datasets)))
+#                added += 1
+#                print('Added',added)
+#
+##            import ipdb
+##            ipdb.set_trace() 
+##    return sitenamerd	
+#    return added
 
 def get_data(dataset):
     """ Return data stored in a remote netCDF dataset available via OpenDAP
